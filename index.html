@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Attendance System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { width: 90%; max-width: 400px; margin: 30px auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
+    h2, h3 { text-align: center; color: #2c3e50; }
+    input, select, button { width: 100%; padding: 10px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; font-size: 15px; }
+    input:focus, select:focus { border-color: #007bff; outline: none; box-shadow: 0 0 5px rgba(0,123,255,0.3); }
+    button { background-color: #28a745; color: white; font-weight: bold; border: none; cursor: pointer; }
+    button:hover { background-color: #218838; }
+    .link-btn { background: none; border: none; color: #007bff; text-decoration: underline; cursor: pointer; font-size: 14px; padding: 0; }
+    .hidden { display: none; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    th { background-color: #007bff; color: white; }
+    .photo img { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 2px solid #007bff; }
+    .form-section label { font-weight: bold; display: block; margin: 8px 0 5px; }
+    .present { color: green; font-weight: bold; }
+    .absent { color: red; font-weight: bold; }
+    .dash { color: gray; font-weight: bold; }
+    .flex { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .logout-btn { position: absolute; top: 15px; right: 15px; background: #ff4d4d; border: none; border-radius: 50%; width: 35px; height: 35px; color: white; font-weight: bold; cursor: pointer; font-size: 18px; box-shadow: 0 0 6px rgba(0,0,0,0.2); }
+    .logout-btn:hover { background: #e60000; }
+    .edit-btn { background-color: #ffc107; color: black; font-weight: bold; padding: 5px 10px; margin-top: 5px; }
+    .edit-btn:hover { background-color: #e0a800; }
+  </style>
+</head>
+<body>
+
+<div class="container" id="loginSection">
+  <h2>Login</h2>
+  <select id="loginRole">
+    <option value="">Select Role</option>
+    <option value="student">Student</option>
+    <option value="admin">Admin</option>
+  </select>
+  <input type="text" id="loginName" placeholder="Enter your name">
+  <input type="password" id="loginPassword" placeholder="Enter password">
+  <button onclick="login()">Login</button>
+  <button class="link-btn" onclick="show('registerSection')">Create New Account</button>
+  <button class="link-btn" onclick="show('forgotSection')">Forgot Password?</button>
+</div>
+
+<div class="container hidden" id="registerSection">
+  <h2>Register New Student</h2>
+  <input type="text" id="regName" placeholder="Full name">
+  <input type="password" id="regPassword" placeholder="Password">
+  <input type="text" id="regPhone" placeholder="Phone number">
+  <input type="text" id="regRoll" placeholder="Roll number">
+  <input type="text" id="regCollege" placeholder="College">
+  <select id="regGroup"><option>B.Com</option></select>
+  <input type="file" id="regPhoto" accept="image/*">
+  <div class="photo"><img id="previewPhoto" src="" alt="Preview Photo"></div>
+  <button onclick="register()">Register</button>
+  <button class="link-btn" onclick="show('loginSection')">Back to Login</button>
+</div>
+
+<div class="container hidden" id="forgotSection">
+  <h2>Forgot Password</h2>
+  <input type="text" id="forgotName" placeholder="Enter your name">
+  <input type="text" id="forgotPhone" placeholder="Enter phone number">
+  <button onclick="recover()">Recover Password</button>
+  <button class="link-btn" onclick="show('loginSection')">Back to Login</button>
+</div>
+
+<div class="container hidden" id="studentDashboard">
+  <button class="logout-btn" onclick="logout()">⎋</button>
+  <h2>Student Dashboard</h2>
+  <div class="flex">
+    <div>
+      <p><strong>Name:</strong> <span id="sName"></span></p>
+      <p><strong>Roll No:</strong> <span id="sRoll"></span></p>
+      <p><strong>Group:</strong> <span id="sGroup"></span></p>
+      <p><strong>College:</strong> <span id="sCollege"></span></p>
+      <p><strong>Phone:</strong> <span id="sPhone"></span></p>
+    </div>
+    <div class="photo"><img id="sPhoto" src="1.jpg" alt="Student Photo"></div>
+  </div>
+  <h3>Today's Attendance</h3>
+  <table><thead><tr><th>Date</th><th>10–11</th><th>11–12</th><th>12–1</th><th>2–3</th><th>3–4</th><th>4–5</th></tr></thead><tbody id="timetableBody"></tbody></table>
+  <h3>Last 3 Days Attendance</h3>
+  <table><thead><tr><th>Date</th><th>10–11</th><th>11–12</th><th>12–1</th><th>2–3</th><th>3–4</th><th>4–5</th></tr></thead><tbody id="threeDayBody"></tbody></table>
+  <button onclick="downloadSummaryPDF()">Download Summary as PDF</button>
+</div>
+
+<div class="container hidden" id="adminDashboard">
+  <button class="logout-btn" onclick="logout()">⎋</button>
+  <h2>Admin Dashboard</h2>
+  <div class="form-section">
+    <label>Student Name</label><select id="studentName"></select>
+    <label>Date</label><input type="date" id="attDate">
+    <label>Time</label>
+    <select id="attTime"><option value="10">10–11</option><option value="11">11–12</option><option value="12">12–1</option><option value="14">2–3</option><option value="15">3–4</option><option value="16">4–5</option></select>
+    <label>Subject</label>
+    <select id="attSubject">
+      <option>Stock Market</option><option>Tally</option><option>Digital Marketing</option>
+      <option>Web Applications</option><option>Advance Accounting</option><option>Investment Planning</option>
+    </select>
+    <label>Status</label><select id="attStatus"><option>Present</option><option>Absent</option></select>
+    <button onclick="addAttendance()">Add Attendance</button>
+  </div>
+
+  <h3>Attendance Records</h3>
+  <table><thead><tr><th>Name</th><th>Roll</th><th>Group</th><th>Photo</th><th>Subject</th><th>Date</th><th>Time</th><th>Status</th></tr></thead><tbody id="adminTableBody"></tbody></table>
+</div>
+
+<script>
+  const users = { "Admin": { password: "admin123", role: "admin" } };
+  let attendanceData = [], regPhotoData = "", loginAttempts = 0;
+  const timeSlots = ["10", "11", "12", "14", "15", "16"];
+
+  document.getElementById("regPhoto").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        regPhotoData = e.target.result;
+        document.getElementById("previewPhoto").src = regPhotoData;
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+
+  function show(id) {
+    document.querySelectorAll(".container").forEach(div => div.classList.add("hidden"));
+    document.getElementById(id).classList.remove("hidden");
+  }
+
+  function login() {
+    const name = loginName.value.trim(), pass = loginPassword.value.trim(), role = loginRole.value;
+    if (!name || !pass || !role) return alert("Please fill in all fields.");
+    if (!users[name]) return alert("User not found");
+    const user = users[name];
+
+    if (role === "admin") {
+      if (name !== "Admin") return incrementAdminLock("Only the real admin can login.");
+      if (user.password !== pass) return incrementAdminLock("Incorrect admin password.");
+      loginAttempts = 0;
+      show("adminDashboard");
+      populateStudentNames();
+      return;
+    }
+
+    if (user.password !== pass) return alert("Incorrect password");
+    if (user.role !== "student") return alert("Unauthorized");
+    show("studentDashboard");
+    sName.textContent = name;
+    sRoll.textContent = user.roll;
+    sGroup.textContent = user.group;
+    sPhone.textContent = user.phone;
+    sCollege.textContent = user.College;
+    sPhoto.src = user.photo;
+    renderTimetable(name);
+  }
+
+  function incrementAdminLock(msg) {
+    loginAttempts++;
+    alert(msg);
+    if (loginAttempts >= 3) {
+      const adminOpt = document.querySelector('#loginRole option[value="admin"]');
+      if (adminOpt) adminOpt.remove();
+      alert("Too many attempts. Admin access removed.");
+    }
+  }
+
+  function register() {
+    const name = regName.value.trim(), pass = regPassword.value.trim(), phone = regPhone.value.trim(),
+    College = regCollege.value.trim(), roll = regRoll.value.trim(), group = regGroup.value;
+    if (!name || !pass || !phone || !College || !roll || !group || !regPhotoData) return alert("All fields required");
+    if (users[name]) return alert("User already exists");
+    users[name] = { password: pass, phone, College, roll, group, photo: regPhotoData, role: "student" };
+    alert("Registered! Please log in."); show("loginSection");
+  }
+
+  function recover() {
+    const name = forgotName.value.trim(), phone = forgotPhone.value.trim();
+    if (!users[name] || users[name].phone !== phone) return alert("User not found");
+    alert("Your password is: " + users[name].password); show("loginSection");
+  }
+
+  function logout() { show("loginSection"); }
+
+  function populateStudentNames() {
+    const list = document.getElementById("studentName"); list.innerHTML = "";
+    Object.keys(users).forEach(name => {
+      if (users[name].role === "student") {
+        const opt = document.createElement("option");
+        opt.value = opt.textContent = name;
+        list.appendChild(opt);
+      }
+    });
+  }
+
+  function addAttendance() {
+    const student = studentName.value, u = users[student];
+    const date = attDate.value, time = attTime.value, subject = attSubject.value, status = attStatus.value;
+    if (!u || !date || !time || !subject || !status) return alert("Fill all fields.");
+    attendanceData.push({ student, date, time, status, subject });
+    const row = document.createElement("tr");
+    row.innerHTML = `<td>${student}</td><td>${u.roll}</td><td>${u.group}</td><td><img src="${u.photo}" width="40" style="border-radius:50%"></td><td>${subject}</td><td>${date}</td><td>${attTime.options[attTime.selectedIndex].text}</td><td><span>${status}</span> <button class="edit-btn" onclick="editAttendance(this)">Edit</button></td>`;
+    adminTableBody.appendChild(row);
+    alert("Attendance Added");
+  }
+
+  function editAttendance(btn) {
+    const row = btn.closest("tr");
+    const name = row.children[0].innerText;
+    const date = row.children[5].innerText;
+    const timeText = row.children[6].innerText;
+    const statusCell = row.children[7];
+    const currentStatus = statusCell.querySelector('span').innerText;
+    const select = document.createElement("select");
+    ["Present", "Absent"].forEach(opt => {
+      const o = document.createElement("option");
+      o.value = o.textContent = opt;
+      if (opt === currentStatus) o.selected = true;
+      select.appendChild(o);
+    });
+    const updateBtn = document.createElement("button");
+    updateBtn.textContent = "Update";
+    updateBtn.onclick = () => {
+      const newStatus = select.value;
+      const timeVal = Object.values(attTime.options).find(opt => opt.text === timeText).value;
+      const entry = attendanceData.find(a => a.student === name && a.date === date && a.time === timeVal);
+      if (entry) entry.status = newStatus;
+      statusCell.innerHTML = `<span>${newStatus}</span> <button class="edit-btn" onclick="editAttendance(this)">Edit</button>`;
+      alert("Status Updated");
+    };
+    statusCell.innerHTML = "";
+    statusCell.appendChild(select);
+    statusCell.appendChild(updateBtn);
+  }
+
+  function renderTimetable(student) {
+    const grouped = {}, today = new Date().toISOString().split('T')[0];
+    attendanceData.forEach(a => {
+      if (a.student !== student) return;
+      if (!grouped[a.date]) grouped[a.date] = {};
+      grouped[a.date][a.time] = `${a.status} (${a.subject})`;
+    });
+
+    timetableBody.innerHTML = "";
+    Object.keys(grouped).sort().reverse().forEach(date => {
+      let row = `<tr><td>${date}</td>`;
+      timeSlots.forEach(t => {
+        const val = grouped[date][t];
+        row += `<td class="${val?.startsWith('Present') ? 'present' : val?.startsWith('Absent') ? 'absent' : 'dash'}">${val || '-'}</td>`;
+      });
+      timetableBody.innerHTML += row + "</tr>";
+    });
+
+    renderThreeDayTable(grouped);
+  }
+
+  function renderThreeDayTable(grouped) {
+    const body = document.getElementById("threeDayBody");
+    body.innerHTML = "";
+    const dates = [...Array(3)].map((_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      return d.toISOString().split("T")[0];
+    });
+    dates.forEach((date, i) => {
+      const color = i === 0 ? "#d4edda" : i === 1 ? "#d1ecf1" : "#e2e3e5";
+      let row = `<tr style="background:${color}"><td><b>${date}</b></td>`;
+      timeSlots.forEach(slot => {
+        const entry = grouped[date]?.[slot];
+        row += `<td class="${entry?.startsWith("Present") ? 'present' : entry?.startsWith("Absent") ? 'absent' : 'dash'}">${entry || '-'}</td>`;
+      });
+      body.innerHTML += row + "</tr>";
+    });
+  }
+
+  function downloadSummaryPDF() {
+    html2canvas(document.querySelector("#threeDayBody").closest("table")).then(canvas => {
+      const pdf = new jspdf.jsPDF();
+      const w = pdf.internal.pageSize.getWidth(), h = canvas.height * w / canvas.width;
+      pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, w, h);
+      pdf.save("attendance_summary.pdf");
+    });
+  }
+</script>
+</body>
+</html>

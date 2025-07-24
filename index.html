@@ -168,14 +168,32 @@
     }
   }
 
-  function register() {
-    const name = regName.value.trim(), pass = regPassword.value.trim(), phone = regPhone.value.trim(),
+function register() {
+  const name = regName.value.trim(), pass = regPassword.value.trim(), phone = regPhone.value.trim(),
     College = regCollege.value.trim(), roll = regRoll.value.trim(), group = regGroup.value;
-    if (!name || !pass || !phone || !College || !roll || !group || !regPhotoData) return alert("All fields required");
-    if (users[name]) return alert("User already exists");
+
+  if (!name || !pass || !phone || !College || !roll || !group || !regPhotoData)
+    return alert("All fields required");
+
+  if (users[name]) return alert("User already exists");
+
+  const data = {
+    name, password: pass, phone, roll, group, college: College, photo: regPhotoData
+  };
+
+  fetch('https://script.google.com/macros/s/AKfycbxCaNrOu5hGBK96fFtsyyo4GcGB3WJnmk0uPBWt40Z81lft5kOK1jUVly8lxebS5PfFnw/exec', {
+    method: 'POST',
+    body: JSON.stringify(data),
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(res => res.text())
+  .then(msg => {
     users[name] = { password: pass, phone, College, roll, group, photo: regPhotoData, role: "student" };
-    alert("Registered! Please log in."); show("loginSection");
-  }
+    alert(msg); show("loginSection");
+  })
+  .catch(err => alert("Error saving data: " + err));
+}
+
 
   function recover() {
     const name = forgotName.value.trim(), phone = forgotPhone.value.trim();
@@ -205,6 +223,25 @@
     row.innerHTML = `<td>${student}</td><td>${u.roll}</td><td>${u.group}</td><td><img src="${u.photo}" width="40" style="border-radius:50%"></td><td>${subject}</td><td>${date}</td><td>${attTime.options[attTime.selectedIndex].text}</td><td><span>${status}</span> <button class="edit-btn" onclick="editAttendance(this)">Edit</button></td>`;
     adminTableBody.appendChild(row);
     alert("Attendance Added");
+  
+  const data = {
+  name: student,
+  roll: u.roll,
+  group: u.group,
+  date,
+  time: attTime.options[attTime.selectedIndex].text,
+  subject,
+  status
+};
+
+fetch('https://script.google.com/macros/s/AKfycbxCaNrOu5hGBK96fFtsyyo4GcGB3WJnmk0uPBWt40Z81lft5kOK1jUVly8lxebS5PfFnw/exec', {
+  method: 'POST',
+  body: JSON.stringify(data),
+  headers: { 'Content-Type': 'application/json' }
+})
+.then(res => res.text())
+.then(msg => console.log(msg))
+.catch(err => alert("Failed to save attendance: " + err));
   }
 
   function editAttendance(btn) {
